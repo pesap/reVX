@@ -1,0 +1,41 @@
+reVX.least\_cost\_xmission.offshore\_utilities.CombineRasters
+=============================================================
+
+.. currentmodule:: reVX.least_cost_xmission.offshore_utilities
+
+.. autoclass:: CombineRasters
+   :members:
+   :show-inheritance:
+   :inherited-members:
+   :special-members: __call__, __add__, __mul__
+
+   
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~CombineRasters.build_off_shore_barriers
+      ~CombineRasters.build_off_shore_friction
+      ~CombineRasters.create_land_mask
+      ~CombineRasters.create_offshore_h5
+      ~CombineRasters.load_land_mask
+      ~CombineRasters.merge_os_and_land_barriers
+      ~CombineRasters.merge_os_and_land_friction
+      ~CombineRasters.profile
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~CombineRasters.COMBO_LAYER_FNAME
+      ~CombineRasters.LAND_MASK_FNAME
+      ~CombineRasters.OFFSHORE_BARRIERS_FNAME
+      ~CombineRasters.OFFSHORE_FRICTION_FNAME
+      ~CombineRasters.land_mask
+   
+   

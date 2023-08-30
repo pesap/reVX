@@ -1,0 +1,75 @@
+reVX.config.least\_cost\_xmission.OffshoreCreatorConfig
+=======================================================
+
+.. currentmodule:: reVX.config.least_cost_xmission
+
+.. autoclass:: OffshoreCreatorConfig
+   :members:
+   :show-inheritance:
+   :inherited-members:
+   :special-members: __call__, __add__, __mul__
+
+   
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~OffshoreCreatorConfig.check_files
+      ~OffshoreCreatorConfig.check_overwrite_keys
+      ~OffshoreCreatorConfig.clear
+      ~OffshoreCreatorConfig.copy
+      ~OffshoreCreatorConfig.fromkeys
+      ~OffshoreCreatorConfig.get
+      ~OffshoreCreatorConfig.items
+      ~OffshoreCreatorConfig.keys
+      ~OffshoreCreatorConfig.pop
+      ~OffshoreCreatorConfig.popitem
+      ~OffshoreCreatorConfig.resolve_path
+      ~OffshoreCreatorConfig.set_self_dict
+      ~OffshoreCreatorConfig.setdefault
+      ~OffshoreCreatorConfig.str_replace_and_resolve
+      ~OffshoreCreatorConfig.update
+      ~OffshoreCreatorConfig.values
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~OffshoreCreatorConfig.NAME
+      ~OffshoreCreatorConfig.REQUIREMENTS
+      ~OffshoreCreatorConfig.STR_REP
+      ~OffshoreCreatorConfig.barrier_files
+      ~OffshoreCreatorConfig.bathy_depth_cutoff
+      ~OffshoreCreatorConfig.bathy_fpath
+      ~OffshoreCreatorConfig.bathy_friction
+      ~OffshoreCreatorConfig.config_dir
+      ~OffshoreCreatorConfig.config_keys
+      ~OffshoreCreatorConfig.ex_offshore_h5_fpath
+      ~OffshoreCreatorConfig.forced_inclusion_files
+      ~OffshoreCreatorConfig.friction_files
+      ~OffshoreCreatorConfig.high_slope_friction
+      ~OffshoreCreatorConfig.land_barrier_layer
+      ~OffshoreCreatorConfig.land_cost_mult
+      ~OffshoreCreatorConfig.land_costs_layer
+      ~OffshoreCreatorConfig.land_h5_fpath
+      ~OffshoreCreatorConfig.land_mask_fpath
+      ~OffshoreCreatorConfig.layer_dir
+      ~OffshoreCreatorConfig.log_level
+      ~OffshoreCreatorConfig.low_slope_cutoff
+      ~OffshoreCreatorConfig.low_slope_friction
+      ~OffshoreCreatorConfig.medium_slope_friction
+      ~OffshoreCreatorConfig.minimum_friction_files
+      ~OffshoreCreatorConfig.name
+      ~OffshoreCreatorConfig.offshore_h5_fpath
+      ~OffshoreCreatorConfig.overwrite_h5
+      ~OffshoreCreatorConfig.save_tiff
+      ~OffshoreCreatorConfig.slope_barrier_cutoff
+      ~OffshoreCreatorConfig.slope_fpath
+      ~OffshoreCreatorConfig.template_raster_fpath
+   
+   

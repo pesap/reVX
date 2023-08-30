@@ -1,0 +1,6 @@
+reVX.least\_cost\_xmission.offshore\_utilities.convert\_pois\_to\_lines
+=======================================================================
+
+.. currentmodule:: reVX.least_cost_xmission.offshore_utilities
+
+.. autofunction:: convert_pois_to_lines
