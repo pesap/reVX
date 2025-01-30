@@ -422,11 +422,11 @@ class PlexosAggregation(BaseProfileAggregation):
             warn(wmsg)
             logger.warning(wmsg)
 
-        table = pd.merge(rev_sc, reeds_build, how='inner', left_on=gid_column,
-                         right_on=gid_column)
+        shared_columns = list(set(rev_sc.columns) & set(reeds_build.columns))
+        table = pd.merge(rev_sc, reeds_build, how="inner", on=shared_columns)
 
         if bespoke:
-            table = cls.convert_bespoke_sc(table, gid_column)
+            table = cls.convert_bespoke_sc(gid_column)
 
         return table
 
