@@ -426,7 +426,7 @@ class PlexosAggregation(BaseProfileAggregation):
         table = pd.merge(rev_sc, reeds_build, how="inner", on=shared_columns)
 
         if bespoke:
-            table = cls.convert_bespoke_sc(table, "sc_gid")
+            table = cls.convert_bespoke_sc(table, gid_column)
 
         return table
 
