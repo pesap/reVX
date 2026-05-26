@@ -16,11 +16,9 @@ from reVX.version import __version__
 
 UTILITY_DIR = os.path.dirname(os.path.realpath(__file__))
 CONFIG_DIR = os.path.join(UTILITY_DIR, "config")
-COUNTY_GDF_FP = ("https://www2.census.gov/geo/tiger/TIGER2021/COUNTY/"
-                 "tl_2021_us_county.zip")
 
 
-def add_county_info(data_frame, regions=COUNTY_GDF_FP):
+def add_county_info(data_frame, regions):
     """Add county info to a Pandas DataFrame with coordinates.
 
     The input DataFrame must have latitude and longitude columns.
@@ -54,7 +52,7 @@ def add_county_info(data_frame, regions=COUNTY_GDF_FP):
     return data_frame
 
 
-def _classify(data_frame, col, regions=COUNTY_GDF_FP):
+def _classify(data_frame, col, regions):
     """Classify a single county column for the input DataFrame"""
     classifier = RegionClassifier(data_frame, regions, col)
     data_frame = classifier.classify(force=True)
@@ -66,10 +64,10 @@ def _lowercase_alpha_only(in_str):
     return ''.join(filter(str.isalpha, in_str.casefold()))
 
 
-def add_nrel_regions(data_frame):
-    """Add NREL Regions info to a Pandas DataFrame with coordinates.
+def add_nlr_regions(data_frame):
+    """Add NLR Regions info to a Pandas DataFrame with coordinates.
 
-    The input DataFrame must have a "state" column containing teh state
+    The input DataFrame must have a "state" column containing the state
     name for each row.
 
     Parameters
@@ -80,19 +78,19 @@ def add_nrel_regions(data_frame):
     Returns
     -------
     pandas.DataFrame
-        A pandas data frame with an extra "nrel_region" column.
+        A pandas data frame with an extra "nlr_region" column.
     """
     if "state" not in data_frame:
         raise KeyError("Input DataFrame missing required column 'state'")
 
-    with open(os.path.join(CONFIG_DIR, "nrel_regions.json")) as fh:
-        nrel_regions = json.load(fh)
+    with open(os.path.join(CONFIG_DIR, "nlr_regions.json")) as fh:
+        nlr_regions = json.load(fh)
 
     regions = {_lowercase_alpha_only(key): val
-               for key, val in nrel_regions.items()}
+               for key, val in nlr_regions.items()}
 
     states = data_frame["state"].apply(_lowercase_alpha_only)
-    data_frame["nrel_region"] = states.map(regions)
+    data_frame["nlr_region"] = states.map(regions)
     return data_frame
 
 
@@ -161,11 +159,11 @@ def add_extra_data(data_frame, extra_data, merge_col="sc_point_gid"):
 def add_reeds_columns(supply_curve_fpath, out_fp=None, capacity_col="capacity",
                       extra_data=None, merge_col="sc_point_gid",
                       filter_out_zero_capacity=True, rename_mapping=None,
-                      regions=COUNTY_GDF_FP):
+                      regions=None):
     """Add columns to supply curve required by ReEDS.
 
     This method will add columns like "cnty_fips", "state", "county",
-    "nrel_region", "eos_mult", and "reg_mult". This method also allows
+    "nlr_region", "eos_mult", and "reg_mult". This method also allows
     you to add extra columns from H5 or JSON files.
 
     Parameters
@@ -215,8 +213,9 @@ def add_reeds_columns(supply_curve_fpath, out_fp=None, capacity_col="capacity",
         By default, ``None`` (no renaming).
     regions : str, optional
         Path to a regions shapefile containing county geometries labeled
-        with county FIPS values. Default value pulls the data from
-        ``www2.census.gov``.
+        with county FIPS values. You can download the data from
+        `www2.census.gov/geo/tiger/TIGER2021/COUNTY/tl_2021_us_county.zip`.
+        If ``None``, then no county info is added. By default, ``None``.
 
     Returns
     -------
@@ -225,8 +224,10 @@ def add_reeds_columns(supply_curve_fpath, out_fp=None, capacity_col="capacity",
     """
 
     sc = pd.read_csv(supply_curve_fpath)
-    sc = add_county_info(sc, regions)
-    sc = add_nrel_regions(sc)
+    if regions is not None:
+        sc = add_county_info(sc, regions)
+        sc = add_nlr_regions(sc)
+
     if extra_data:
         sc = add_extra_data(sc, extra_data, merge_col=merge_col)
 

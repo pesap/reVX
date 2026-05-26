@@ -5,9 +5,10 @@ reVX command line interface (CLI).
 import click
 import logging
 import os
-import json
 from pathlib import Path
+import pandas as pd
 
+from gaps.config import load_config
 from gaps.cli import CLICommandFromFunction, as_click_command
 
 from rex.utilities.cli_dtypes import STR, STRLIST, FLOAT
@@ -22,7 +23,9 @@ from reVX.utilities.forecasts import FcstUtils
 from reVX.utilities.output_extractor import output_extractor
 from reVX.utilities.region_classifier import RegionClassifier
 from reVX.utilities.reeds_cols import add_reeds_columns
-from reVX.setbacks.setbacks_converter import SetbacksConverter
+from reVX.exclusions.setbacks.setbacks_converter import SetbacksConverter
+from reVX.utilities.fix_sc_lat_lons import fix_sc_lat_lon
+from reVX.utilities.utilities import rev_sc_to_geotiff_arr
 
 from reVX import __version__
 
@@ -224,13 +227,13 @@ def layers_from_h5(ctx, out_dir, layers, hsds):
 @exclusions.command()
 @click.option('--excl_dict_fpath', '-ed', required=True,
               type=click.Path(exists=True),
-              help=('Path to JSON file containing the ``"excl_dict"`` '
-                    'key which points to the exclusion dictionary defining '
-                    'the mask that should be generated. A typical reV '
-                    'aggregation config satisfied this requirement. If this '
-                    'file also contains an ``"excl_fpath"`` key, the value '
-                    'from the file will override the ``--excl_h5`` CLI '
-                    'argument input.'))
+              help=('Path to config file (JSON/JSON5/TOML/YAML) containing '
+                    'the ``"excl_dict"`` key which points to the exclusion '
+                    'dictionary defining the mask that should be generated. '
+                    'A typical reV aggregation config satisfies this '
+                    'requirement. If this file also contains an '
+                    '``"excl_fpath"`` key, the value from the file will '
+                    'override the ``--excl_h5`` CLI argument input.'))
 @click.option('--out', '-o', required=True, type=STR,
               help=('Output name. If this string value ends in ".tif" '
                     'or ".tiff", this input is assumed to be a path to an '
@@ -239,29 +242,36 @@ def layers_from_h5(ctx, out_dir, layers, hsds):
                     'name of the layer in the exclusion file to write the '
                     'mask to.'))
 @click.option('--min_area', '-ma', default=None, type=FLOAT,
-              help=('Minimum required contiguous area in sq-km.'))
-@click.option('--kernel', '-k', type=STR, default='queen',
-              show_default=True,
-              help=('Contiguous filter method to use on final exclusion.'))
+              help=('Minimum required contiguous area in sq-km. If not '
+                    'provided via command line, will attempt to pull this '
+                    'value from the `excl_dict_fpath` input.'))
+@click.option('--kernel', '-k', type=STR, default=None,
+              help=('Contiguous filter method to use on final exclusion. If '
+                    'not provided via command line, will attempt to pull this '
+                    'value from the `excl_dict_fpath` input. If not present '
+                    'in the `excl_dict_fpath` input, will be set to "queen".'))
 @click.option('--hsds', '-hsds', is_flag=True,
               help=('Flag to use h5pyd to handle .h5 domain hosted on AWS '
                     'behind HSDS'))
 @click.pass_context
 def mask(ctx, excl_dict_fpath, out, min_area, kernel, hsds):
-    """
-    Compute Setbacks locally
-    """
+    """Compute reV exclusions mask from exclusion dictionary"""
     log_level = "DEBUG" if ctx.obj.get('VERBOSE') else "INFO"
     init_logger('reV', log_level=log_level)
     init_logger('reVX', log_level=log_level)
 
     logger.info("Calculating exclusion mask from {!r}".format(excl_dict_fpath))
 
-    with open(excl_dict_fpath, 'r') as fh:
-        config = json.load(fh)
+    config = load_config(excl_dict_fpath)
 
     excl_fpath = config.get("excl_fpath", ctx.obj['EXCL_H5'])
     logger.debug("Exclusion filepath(s): {!r}".format(excl_fpath))
+
+    min_area = min_area or config.get("min_area")
+    logger.debug("Minimum area: {!r}".format(min_area))
+
+    kernel = kernel or config.get("kernel", "queen")
+    logger.debug("Kernel: {!r}".format(kernel))
 
     excl_dict = config['excl_dict']
     logger.debug("Exclusion dictionary: {!r}".format(excl_dict))
@@ -285,6 +295,72 @@ def mask(ctx, excl_dict_fpath, out, min_area, kernel, hsds):
                 .format(excl_dict))
         LayeredH5(excl_fpath).write_layer_to_h5(mask_, out, profile,
                                                 description=desc)
+
+
+@main.command()
+@click.option('--agg_config', '-ac', required=True,
+              type=click.Path(exists=True),
+              help=('Path to config file containing the ``"excl_fpath"`` '
+                    'key which points to the exclusion file(s) used for the '
+                    'reV aggregation run. A typical reV aggregation config '
+                    'satisfied this requirement.'))
+@click.argument('sc_fps', type=click.Path(exists=True), nargs=-1)
+def fix_rev_sc_lat_lon(agg_config, sc_fps):
+    """Fix reV SC lat/lon values (in-place) using pyproj"""
+    config = load_config(agg_config)
+    fixed_scs = fix_sc_lat_lon(sc_fps, excl_fp=config["excl_fpath"],
+                               resolution=config["resolution"], as_gpkg=False)
+
+    for sc_fp, fixed_sc in fixed_scs.items():
+        fixed_sc.to_csv(sc_fp, index=False)
+
+
+@main.command()
+@click.option('--agg_config', '-ac', required=True,
+              type=click.Path(exists=True),
+              help=('Path to config file containing the ``"excl_fpath"`` '
+                    'key which points to the exclusion file(s) used for the '
+                    'reV aggregation run. A typical reV aggregation config '
+                    'satisfied this requirement.'))
+@click.argument('sc_fps', type=click.Path(exists=True), nargs=-1)
+def rev_sc_to_gpkg(agg_config, sc_fps):
+    """
+    Convert reV SC to a GeoPackage where the geometries are supply
+    curve cells
+    """
+    config = load_config(agg_config)
+    gpkgs = fix_sc_lat_lon(sc_fps, excl_fp=config["excl_fpath"],
+                           resolution=config["resolution"], as_gpkg=True)
+
+    for sc_fp, gpkg in gpkgs.items():
+        out_fp = sc_fp.replace(".csv", ".gpkg")
+        gpkg.to_file(out_fp, driver="GPKG", index=False)
+
+
+@main.command()
+@click.option('--agg_config', '-ac', required=True,
+              type=click.Path(exists=True),
+              help=('Path to config file containing the ``"excl_fpath"`` '
+                    'key which points to the exclusion file(s) used for the '
+                    'reV aggregation run. A typical reV aggregation config '
+                    'satisfied this requirement.'))
+@click.option('--sc_fp', '-sc', type=click.Path(exists=True), required=True,
+              help=('Path to reV supply curve'))
+@click.argument('cols', type=STR, nargs=-1)
+def rev_sc_to_tiff(agg_config, sc_fp, cols):
+    """
+    Convert reV SC to a GeoTiff containing data from the specified columns
+    """
+    config = load_config(agg_config)
+    sc = pd.read_csv(sc_fp)
+
+    sc_tiffs = rev_sc_to_geotiff_arr(sc, config["excl_fpath"],
+                                     config["resolution"], cols,
+                                     dtype="float32")
+
+    for col, value_array, profile in sc_tiffs:
+        out_fp = sc_fp.replace(".csv", f"_{col}.tif")
+        Geotiff.write(out_fp, profile, value_array, dtype="float32")
 
 
 def _reeds_cols_preprocessor(config):

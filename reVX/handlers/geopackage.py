@@ -61,8 +61,8 @@ class GPKGMeta:
         """str: Name of the primary key column in the user data table. """
         with sqlite3.connect(self.filename) as con:
             cursor = con.cursor()
-            cursor.execute("PRAGMA table_info({})"
-                           .format(self.primary_table))
+            table_name = _escape_sqlite_identifier(self.primary_table)
+            cursor.execute("PRAGMA table_info({})".format(table_name))
             pragma = cursor.fetchall()
             pk_name = [info[1] for info in pragma if info[-1]]
             assert len(pk_name) == 1, "Found multiple Primary Key columns"
@@ -125,3 +125,9 @@ class GPKGMeta:
                                    maxx=maxx, minx=minx, maxy=maxy, miny=miny))
             ids = tuple(id_[0] for id_ in cursor.fetchall())
         return ids
+
+
+def _escape_sqlite_identifier(identifier):
+    """Escape a SQLite identifier for use in SQL statements."""
+    return '"{}"'.format(identifier.replace('"', '""'))
+

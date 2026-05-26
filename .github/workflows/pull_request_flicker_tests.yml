@@ -1,0 +1,33 @@
+name: Flicker Tests
+
+on: pull_request
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ github.event.pull_request.head.sha }}
+    - name: Set up Python 3.11
+      uses: conda-incubator/setup-miniconda@v2
+      with:
+        auto-update-conda: true
+        python-version: 3.11
+        miniconda-version: "latest"
+    - name: Install conda dependencies
+      shell: bash -l {0}
+      run: |
+        conda install rtree pip pytest cython cmake ninja setuptools wheel
+        pip install --upgrade "setuptools<81" poetry-core cffi scikit-build-core h3
+        pip install --no-build-isolation -e .[flicker]
+    - name: Run pytest and Generate coverage report
+      shell: bash -l {0}
+      run: |
+        pytest -v -ra -rs tests/test_exclusions_turbine_flicker.py
